@@ -1,0 +1,694 @@
+<!DOCTYPE html>
+<!-- saved from url=(0029)https://ai-theatre.pages.dev/ -->
+<html lang="zh-CN"><head><meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+    
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
+    <title>叙事剧场 · Ver.1.0</title>
+    <style>
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+        html, body {
+            height: 100%;
+            width: 100%;
+            overflow: hidden;
+        }
+        body {
+            font-family: system-ui, 'Segoe UI', 'Helvetica Neue', sans-serif;
+            background: var(--bg-body);
+            color: var(--text-primary);
+            transition: background 0.2s, color 0.2s;
+            height: 100%;
+            padding: 20px;
+        }
+        /* 主题变量（支持动态修改） */
+        :root {
+            --bg-body: linear-gradient(145deg, #1e2a3a 0%, #0f1724 100%);
+            --card-bg: rgba(30, 41, 59, 0.85);
+            --panel-bg: rgba(15, 23, 42, 0.8);
+            --text-primary: #f1f5f9;
+            --text-secondary: #cbd5e1;
+            --border: rgba(255,255,255,0.15);
+            --accent: #f97316;
+            --accent-hover: #fd8f3a;
+            --input-bg: #0f172a;
+            --bubble-bg: #1e293b;
+            --system-bubble: #2d3a4e;
+            --npc-bubble: #3b2e2e;
+            --error-color: #ff8a7a;
+        }
+        body.light {
+            --bg-body: linear-gradient(145deg, #e2e8f0 0%, #cbd5e1 100%);
+            --card-bg: rgba(255,255,240,0.9);
+            --panel-bg: rgba(248,250,252,0.9);
+            --text-primary: #0f172a;
+            --text-secondary: #334155;
+            --border: rgba(0,0,0,0.2);
+            --accent: #e65c00;
+            --accent-hover: #ff7a2f;
+            --input-bg: #ffffff;
+            --bubble-bg: #f1f5f9;
+            --system-bubble: #e2e8f0;
+            --npc-bubble: #fde68a;
+            --error-color: #c2410c;
+        }
+        .app-container {
+            display: flex;
+            gap: 24px;
+            height: 100%;
+            width: 100%;
+            overflow: hidden;
+        }
+        .modules-panel {
+            flex: 1.2;
+            min-width: 280px;
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
+            height: 100%;
+            overflow-y: auto;
+            padding-right: 4px;
+        }
+        .module-card {
+            background: var(--card-bg);
+            backdrop-filter: blur(12px);
+            border-radius: 28px;
+            border: 1px solid var(--border);
+            padding: 20px;
+            cursor: pointer;
+            transition: all 0.2s;
+            box-shadow: 0 8px 20px rgba(0,0,0,0.2);
+        }
+        .module-card:hover {
+            background: rgba(249,115,22,0.2);
+            transform: translateY(-2px);
+        }
+        .module-title {
+            font-size: 1.4rem;
+            font-weight: 700;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            margin-bottom: 12px;
+            color: var(--accent);
+        }
+        .module-preview {
+            font-size: 0.85rem;
+            color: var(--text-secondary);
+            line-height: 1.4;
+            word-break: break-word;
+            display: -webkit-box;
+            -webkit-line-clamp: 2;
+            -webkit-box-orient: vertical;
+            overflow: hidden;
+        }
+        .role-badge-list {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 8px;
+            margin-top: 8px;
+        }
+        .role-mini-badge {
+            background: var(--accent);
+            padding: 4px 12px;
+            border-radius: 40px;
+            font-size: 0.75rem;
+            font-weight: 500;
+        }
+        .mini-graph-container svg {
+            width: 100%;
+            height: 100%;
+            border-radius: 14px;
+        }
+        .chat-area {
+            flex: 2.5;
+            min-width: 380px;
+            background: var(--panel-bg);
+            backdrop-filter: blur(8px);
+            border-radius: 32px;
+            display: flex;
+            flex-direction: column;
+            border: 1px solid var(--border);
+            height: 100%;
+            overflow: hidden;
+        }
+        .chat-messages {
+            flex: 1;
+            overflow-y: auto;
+            padding: 20px;
+            display: flex;
+            flex-direction: column;
+            gap: 16px;
+        }
+        .message-wrapper {
+            position: relative;
+            display: flex;
+            justify-content: flex-start;
+            width: 100%;
+        }
+        .bubble {
+            max-width: 85%;
+            padding: 12px 18px;
+            border-radius: 28px;
+            background: var(--bubble-bg);
+            color: var(--text-primary);
+            animation: fadeIn 0.25s;
+            box-shadow: 0 2px 6px rgba(0,0,0,0.2);
+            transition: 0.1s;
+        }
+        .npc-bubble {
+            background: var(--npc-bubble);
+            border-left: 4px solid #ffaa44;
+        }
+        .bubble .speaker {
+            font-weight: bold;
+            color: var(--accent);
+            font-size: 0.85rem;
+            margin-bottom: 4px;
+        }
+        .bubble .action {
+            font-style: italic;
+            color: var(--text-secondary);
+            font-size: 0.8rem;
+            margin: 4px 0;
+        }
+        .control-bar {
+            padding: 20px;
+            background: var(--card-bg);
+            border-top: 1px solid var(--border);
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+        }
+        .control-row {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 12px;
+            align-items: flex-end;
+        }
+        .control-group {
+            flex: 1;
+            min-width: 100px;
+        }
+        button {
+            background: var(--accent);
+            border: none;
+            border-radius: 40px;
+            padding: 8px 18px;
+            font-weight: 600;
+            color: white;
+            cursor: pointer;
+            transition: 0.1s;
+        }
+        button:hover {
+            background: var(--accent-hover);
+            transform: translateY(-1px);
+        }
+        button.secondary {
+            background: #475569;
+        }
+        input, textarea, select {
+            background: var(--input-bg);
+            border: 1px solid var(--border);
+            border-radius: 20px;
+            padding: 8px 14px;
+            color: var(--text-primary);
+            width: 100%;
+        }
+        .status-message {
+            padding: 8px 16px;
+            margin: 0 20px 12px 20px;
+            border-radius: 40px;
+            font-size: 0.8rem;
+            transition: opacity 0.3s;
+        }
+        .status-error {
+            background: rgba(255, 100, 100, 0.2);
+            color: var(--error-color);
+            border-left: 3px solid var(--error-color);
+        }
+        .status-info {
+            background: rgba(249,115,22,0.15);
+            color: var(--accent);
+        }
+        /* 模态框 */
+        .modal-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.85);
+            backdrop-filter: blur(8px);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 2000;
+        }
+        .modal-container {
+            background: var(--panel-bg);
+            border-radius: 32px;
+            width: 95%;
+            height: 90%;
+            max-width: 1600px;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+            border: 1px solid var(--border);
+        }
+        .modal-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 16px 24px;
+            background: var(--card-bg);
+            border-bottom: 1px solid var(--border);
+        }
+        .close-modal {
+            cursor: pointer;
+            font-size: 1.8rem;
+            line-height: 1;
+            padding: 0 8px;
+        }
+        /* 全局设置美化 */
+        .modal-body {
+            padding: 24px;
+            overflow-y: auto;
+            display: flex;
+            flex-direction: column;
+            gap: 18px;
+        }
+        .modal-body label {
+            font-weight: 600;
+            margin-bottom: 4px;
+            display: block;
+            color: var(--text-primary);
+        }
+        .modal-body input, .modal-body select, .modal-body textarea {
+            padding: 12px 16px;
+            border-radius: 28px;
+            background: var(--input-bg);
+            border: 1px solid var(--border);
+            width: 100%;
+        }
+        .modal-body .color-row {
+            display: flex;
+            gap: 16px;
+            align-items: center;
+            flex-wrap: wrap;
+        }
+        .graph-editor-container {
+            display: flex;
+            flex: 1;
+            gap: 20px;
+            padding: 20px;
+            overflow: hidden;
+        }
+        .editor-left {
+            width: 320px;
+            background: rgba(30, 41, 59, 0.7);
+            border-radius: 24px;
+            padding: 16px;
+            backdrop-filter: blur(4px);
+            display: flex;
+            flex-direction: column;
+            gap: 16px;
+            overflow-y: auto;
+        }
+        .editor-right {
+            flex: 1;
+            background: #0f172a;
+            border-radius: 24px;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+        }
+        .graph-canvas {
+            flex: 1;
+            min-height: 0;
+            background: #0f172a;
+            border-radius: 20px;
+            margin: 16px;
+            border: 1px solid #334155;
+        }
+        .info-panel {
+            background: rgba(30, 41, 59, 0.85);
+            border-radius: 20px;
+            padding: 12px;
+            font-size: 0.9rem;
+            color: #e2e8f0;
+            margin: 0 16px 16px 16px;
+            flex-shrink: 0;
+        }
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(6px);}
+            to { opacity: 1; transform: translateY(0);}
+        }
+    </style>
+    <script src="./叙事剧场 · Ver.1.0_files/d3.v7.min.js.download"></script>
+</head>
+<body>
+<div class="app-container">
+    <div class="modules-panel">
+        <div class="module-card" id="moduleWorldBtn">
+            <div class="module-title">🌍 世界观设定</div>
+            <div class="module-preview" id="worldPreview">场景: 在创咖。下午四点左右，店内比较安静。</div>
+        </div>
+        <div class="module-card" id="moduleRoleBtn">
+            <div class="module-title">🎭 角色设定</div>
+            <div class="module-preview">
+                <div>角色名录:</div>
+                <div class="role-badge-list" id="roleBadgeList"><span class="role-mini-badge">樱 (情绪:5/8; 倾向:10)</span><span class="role-mini-badge">凛 (情绪:7/10; 倾向:6)</span><span class="role-mini-badge">良 (情绪:4/5; 倾向:4)</span></div>
+            </div>
+            <!-- 缩略关系图容器 -->
+            <div class="mini-graph-container" id="miniGraphContainer"></div>
+        </div>
+        <div class="module-card" id="moduleSettingsBtn">
+            <div class="module-title">⚙️ 全局设置</div>
+            <div class="module-preview">API / 存档 / 主题 / 颜色</div>
+        </div>
+    </div>
+
+    <div class="chat-area">
+        <div style="padding: 16px 20px 0;"><h3>🎬 叙事剧场 · AI 对话</h3></div>
+        <div class="chat-messages" id="chatMessages"><div class="message-wrapper"><div class="bubble"><div class="speaker">🎭 system</div><div class="content">对话已重置。</div></div><div class="debug-buttons" style="position: absolute; right: 8px; top: 50%; transform: translateY(-50%); display: none; gap: 8px; background: rgba(0, 0, 0, 0.6); backdrop-filter: blur(4px); padding: 4px 8px; border-radius: 40px;"><button class="debug-btn rollback-btn" data-idx="0" style="background:#334155; border:none; border-radius:30px; padding:4px 8px; font-size:0.7rem; cursor:pointer;">⏪ 回溯至此</button></div></div></div>
+        <div class="control-bar">
+            <div class="control-row">
+                <div class="control-group"><label>🎭 手动选择角色</label><select id="manualRoleSelect"><option value="">-- 选择角色 --</option><option value="樱">樱</option><option value="凛">凛</option><option value="良">良</option></select></div>
+                <button id="speakManualBtn">🤖 AI扮演该角色</button>
+                <button id="speakAutoBtn">🎲 AI自动推进</button>
+                <button id="generateNarrationBtn" style="background:#4a6a8a;">📖 生成剧情旁白</button>
+            </div>
+            <div class="control-row">
+                <div class="control-group"><label>👤 用户扮演角色</label><select id="userRoleSelect"><option value="">-- 选择角色 --</option><option value="樱">樱</option><option value="凛">凛</option><option value="良">良</option></select></div>
+                <div class="control-group"><label>🎬 动作 (可选)</label><input type="text" id="userActionInput" placeholder="例如：握紧拳头"></div>
+                <div class="control-group"><label>💬 台词</label><input type="text" id="userLineInput" placeholder="要说的话"></div>
+                <button id="userSpeakBtn">✍️ 用户扮演发言</button>
+            </div>
+        </div>
+        <div id="statusContainer" style="min-height: 60px;"></div>
+    </div>
+</div>
+
+<script>
+    // -------------------- 核心数据 --------------------
+    let roles = [];
+    let roleRelations = {};
+    let relationText = "";
+    let scene = "";
+    let motivation = "";
+    let chatHistory = [];
+    let lastSpeaker = null;
+
+    const API_URL = "https://models.sjtu.edu.cn/api/v1/chat/completions";
+    let apiKey = "";
+    let modelName = "deepseek-chat";
+    let corsProxy = "";
+
+    // DOM
+    const worldPreview = document.getElementById('worldPreview');
+    const roleBadgeList = document.getElementById('roleBadgeList');
+    const manualRoleSelect = document.getElementById('manualRoleSelect');
+    const userRoleSelect = document.getElementById('userRoleSelect');
+    const userActionInput = document.getElementById('userActionInput');
+    const userLineInput = document.getElementById('userLineInput');
+    const chatMessagesDiv = document.getElementById('chatMessages');
+    const statusContainer = document.getElementById('statusContainer');
+
+    function escapeHtml(str) { if (!str) return ''; return str.replace(/[&<>]/g, m => m==='&'?'&amp;':m==='<'?'&lt;':m==='>'?'&gt;':m); }
+    let statusTimeout = null;
+    function showStatusMessage(msg, isError = false) {
+        if (statusTimeout) clearTimeout(statusTimeout);
+        statusContainer.innerHTML = `<div class="status-message ${isError ? 'status-error' : 'status-info'}">${escapeHtml(msg)}</div>`;
+        statusTimeout = setTimeout(() => { if (statusContainer.firstChild) statusContainer.removeChild(statusContainer.firstChild); }, isError?5000:2000);
+    }
+    function setLoading(loading, msg) { 
+        if(loading && msg) showStatusMessage(msg);
+        ['speakManualBtn','speakAutoBtn','userSpeakBtn','generateNarrationBtn'].forEach(id=>{ let btn=document.getElementById(id); if(btn) btn.disabled=loading; });
+    }
+    function captureSnapshot() { return { roles: JSON.parse(JSON.stringify(roles)), lastSpeaker, roleRelations: JSON.parse(JSON.stringify(roleRelations)), relationText, scene, motivation }; }
+    function restoreSnapshot(snapshot) { roles = JSON.parse(JSON.stringify(snapshot.roles)); lastSpeaker = snapshot.lastSpeaker; roleRelations = JSON.parse(JSON.stringify(snapshot.roleRelations)); relationText = snapshot.relationText; scene = snapshot.scene; motivation = snapshot.motivation; updatePreviews(); drawMiniGraph(); }
+
+    // 更新左侧预览及缩略图
+    function updatePreviews() {
+        worldPreview.innerText = scene ? `场景: ${scene.substring(0, 60)}${scene.length>60?'...':''}` : "未设定场景，点击编辑";
+        roleBadgeList.innerHTML = roles.map(r => `<span class="role-mini-badge">${escapeHtml(r.name)} (情绪:${r.excitement}/${r.maxExcitement}; 倾向:${r.talkativeness})</span>`).join('');
+        if(roles.length===0) roleBadgeList.innerHTML = '<span>暂无角色，点击模块2添加</span>';
+        const options = '<option value="">-- 选择角色 --</option>' + roles.map(r => `<option value="${escapeHtml(r.name)}">${escapeHtml(r.name)}</option>`).join('');
+        manualRoleSelect.innerHTML = options;
+        userRoleSelect.innerHTML = options;
+        drawMiniGraph(); // 每次预览更新时重绘缩略图
+    }
+
+    function addRole(name, personality="待补充", background="无", talk=5, excite=5, maxExcite=10) {
+        if(!name.trim()) return false;
+        if(roles.some(r=>r.name===name.trim())){ alert("角色名重复"); return false; }
+        const newRole = { id: Date.now()+'-'+Math.random().toString(36).substr(2,5), name: name.trim(), personality, background, talkativeness: Math.min(10,Math.max(1,talk)), excitement: Math.min(maxExcite,Math.max(1,excite)), maxExcitement: Math.min(10,Math.max(1,maxExcite)), continuousCount:0 };
+        roles.push(newRole);
+        if(!roleRelations[name]) roleRelations[name]={};
+        updatePreviews();
+        return true;
+    }
+    function deleteRole(roleId) {
+        const role = roles.find(r=>r.id===roleId);
+        if(role){ delete roleRelations[role.name]; roles=roles.filter(r=>r.id!==roleId); for(let rn in roleRelations) if(roleRelations[rn][role.name]) delete roleRelations[rn][role.name]; }
+        updatePreviews();
+        if(chatHistory.length) addSystemMessage("system","角色变更，建议重置对话。");
+    }
+    function getRelationBetween(a,b){ if(!roleRelations[a]||!roleRelations[a][b]) return "无明显关系"; return roleRelations[a][b]; }
+    function getAllRelationsText() { let lines=[]; for(let i=0;i<roles.length;i++) for(let j=i+1;j<roles.length;j++){ let a=roles[i].name,b=roles[j].name,r1=getRelationBetween(a,b),r2=getRelationBetween(b,a); if(r1!=="无明显关系"||r2!=="无明显关系") lines.push(`${a} ↔ ${b} : ${r1}${r2!==r1?` (${b}视角:${r2})`:''}`);} return lines.length?lines.join("\n"):"暂无专门关系设定。";}
+    function maxConsecutiveAllowed(role){ return Math.max(1, Math.floor(0.5*Math.sqrt(role.excitement*role.talkativeness))); }
+
+    // 导演提示等（保留原有）
+    function buildDirectorPrompt(){ /* 同原 */ let roleDesc=roles.map(r=>`【${r.name}】性格:${r.personality}|背景:${r.background}|说话倾向:${r.talkativeness}/10|激动值:${r.excitement}/${r.maxExcitement}|连续上限:${maxConsecutiveAllowed(r)}`).join("\n"); return `这是一次情感判断与发言推荐的请求。你是一位专业的互动叙事导演。当前剧场设定如下：\n${roleDesc}\n【角色关系】${getAllRelationsText()}\n【场景】${scene}\n【动机】${motivation}\n任务：根据对话历史调整激动值(1-10)，选择最优/次优发言角色，可选NPC。\n输出严格JSON: {"new_excitements":{"角色名":数值},"best_next":"","alternate_next":"","npc":null或{"name":"","action":"","content":""}}`; }
+    function buildActorPrompt(){ let roleDesc=roles.map(r=>`【${r.name}】性格:${r.personality}|背景:${r.background}|激动值:${r.excitement}/${r.maxExcitement}`).join("\n"); return `这是一次角色扮演请求。你扮演指定的角色，仅输出动作和台词。剧场设定：\n${roleDesc}\n【角色关系】${getAllRelationsText()}\n【场景】${scene}\n【动机】${motivation}\n输出格式严格: {"action": "...", "content": "..."} 不要输出其他字段。`; }
+    function buildNarrationPrompt(){ let historyContext=chatHistory.slice(-10).map(m=>`【${m.roleName}】${m.action?`(${m.action})`:''} "${m.content}"`).join("\n"); return `你是一位剧本推进者。根据当前对话和故事动机，生成一句简短的剧情发展旁白（只推动故事前进）。不要描写环境氛围，只写情节推进。输出纯文本，不要加引号或其他格式。\n\n对话历史：\n${historyContext||"无"}\n\n当前动机：${motivation}\n\n请输出一句剧情旁白：`; }
+    async function callLLM(messages,temperature=0.7,maxTokens=300){ if(!apiKey) throw new Error("API Key 未设置"); let targetUrl=API_URL; if(corsProxy&&!targetUrl.includes(corsProxy)) targetUrl=corsProxy.replace(/\/$/,'')+'/'+targetUrl.replace(/^https?:\/\//,''); const controller=new AbortController(); const timeoutId=setTimeout(()=>controller.abort(),30000); try{ const response=await fetch(targetUrl,{method:"POST",headers:{"Content-Type":"application/json","Authorization":`Bearer ${apiKey}`},body:JSON.stringify({model:modelName,messages,temperature,max_tokens:maxTokens,top_p:0.9}),signal:controller.signal}); clearTimeout(timeoutId); if(!response.ok){const errText=await response.text(); throw new Error(`HTTP ${response.status}: ${errText}`);} const data=await response.json(); return data.choices[0].message.content; } catch(e){ clearTimeout(timeoutId); throw e; } }
+    async function updateMoodAndRecommend(){ /* 同原 */ if(roles.length===0) return null; setLoading(true,"🎭 分析情绪..."); try{ const sysPrompt=buildDirectorPrompt(); let recentHistory=chatHistory.slice(-12).map(m=>`【${m.roleName}】${m.action?`(${m.action})`:''} "${m.content}"`).join("\n"); let currentMoods=roles.map(r=>`${r.name}:${r.excitement}`).join(", "); let continuousInfo=roles.map(r=>`${r.name}已连续发言${r.continuousCount}次，上限${maxConsecutiveAllowed(r)}`).join("; "); const userMsg=`当前各角色激动值: ${currentMoods}\n连续发言记录: ${continuousInfo}\n\n最新对话:\n${recentHistory||"无"}\n\n请输出JSON。`; const raw=await callLLM([{role:"system",content:sysPrompt},{role:"user",content:userMsg}],0.5,400); let parsed; try{ parsed=JSON.parse(raw); }catch(e){ const match=raw.match(/\{[\s\S]*\}/); if(match) parsed=JSON.parse(match[0]); else throw new Error("模型输出非JSON"); } if(parsed.new_excitements) for(let role of roles){ let newVal=parsed.new_excitements[role.name]; if(newVal!==undefined) role.excitement=Math.min(role.maxExcitement,Math.max(1,parseInt(newVal))); } if(parsed.npc && parsed.npc.name && parsed.npc.content){ addNPCCharacterMessage(parsed.npc.name,parsed.npc.content,parsed.npc.action||"出现",raw); setLoading(false); return {npcUsed:true,raw}; } let best=parsed.best_next, alt=parsed.alternate_next; if(!best||!roles.find(r=>r.name===best)) best=selectBestSpeakerByWeight(true); if(!alt||!roles.find(r=>r.name===alt)) alt=selectBestSpeakerByWeight(false,best); return {best,alternate:alt,raw}; }catch(e){ showStatusMessage(`情绪/推荐失败: ${e.message}`,true); let fallback=selectBestSpeakerByWeight(true); return {best:fallback,alternate:null,raw:null}; }finally{ setLoading(false); } }
+    function selectBestSpeakerByWeight(primary=true,excludeName=null){ let candidates=roles.filter(r=>r.name!==excludeName); if(candidates.length===0) candidates=roles.slice(); candidates.sort((a,b)=>(b.talkativeness*b.excitement)-(a.talkativeness*a.excitement)); return primary?candidates[0]?.name:(candidates.length>1?candidates[1].name:candidates[0]?.name); }
+    async function speakAsRole(roleName,parentRawResponse=null,regenerateIndex=null){ const role=roles.find(r=>r.name===roleName); if(!role){ showStatusMessage(`角色 ${roleName} 不存在`,true); return false; } setLoading(true,`${roleName} 正在酝酿台词...`); try{ const sysPrompt=buildActorPrompt(); let historyContext=chatHistory.map(m=>`【${m.roleName}】${m.action?`(${m.action})`:''} "${m.content}"`).join("\n"); const userPrompt=`请扮演【${roleName}】，当前激动值 ${role.excitement}/${role.maxExcitement}。只输出JSON：{"action": "...", "content": "..."}`; const raw=await callLLM([{role:"system",content:sysPrompt},{role:"user",content:`历史:\n${historyContext||"无"}\n\n${userPrompt}`}],0.7,220); let parsed; try{ parsed=JSON.parse(raw); }catch(e){ const match=raw.match(/\{.*\}/s); if(match) parsed=JSON.parse(match[0]); else throw new Error("格式错误"); } if(!parsed.action||!parsed.content) throw new Error("返回的JSON缺少action或content字段"); if(regenerateIndex!==null && regenerateIndex>=0 && chatHistory[regenerateIndex] && !chatHistory[regenerateIndex].isNPC && chatHistory[regenerateIndex].roleName===roleName){ const snapshot=captureSnapshot(); chatHistory[regenerateIndex]={...chatHistory[regenerateIndex], content:parsed.content, action:parsed.action, rawRoleplayResponse:raw, snapshot, timestamp:Date.now()}; renderChatMessages(); updateContinuousCount(roleName); }else{ addCharacterMessage(roleName,parsed.content,parsed.action,parentRawResponse,raw); updateContinuousCount(roleName); } return true; }catch(e){ showStatusMessage(`大模型输出异常，请重试。错误: ${e.message}`,true); return false; }finally{ setLoading(false); } }
+    function userSpeak(roleName,action,content){ if(!roleName){ showStatusMessage("请选择要扮演的角色",true); return false; } if(!content.trim()){ showStatusMessage("台词不能为空",true); return false; } const role=roles.find(r=>r.name===roleName); if(!role){ showStatusMessage(`角色 ${roleName} 不存在`,true); return false; } addCharacterMessage(roleName,content,action||"（无动作）",null,null); updateContinuousCount(roleName); showStatusMessage(`您扮演 ${roleName} 说：“${content.substring(0,50)}”`,false); return true; }
+    async function generateNarration(){ if(chatHistory.length===0){ showStatusMessage("请先进行一些对话再生成旁白",true); return; } setLoading(true,"📖 生成剧情旁白..."); try{ const prompt=buildNarrationPrompt(); const raw=await callLLM([{role:"user",content:prompt}],0.7,100); let narration=raw.trim(); if(!narration) narration="故事继续向前发展。"; addSystemMessage("📖 剧情旁白",narration); }catch(e){ showStatusMessage(`生成旁白失败: ${e.message}`,true); }finally{ setLoading(false); } }
+    function updateContinuousCount(speakerName){ if(!speakerName) return; if(lastSpeaker===speakerName){ let role=roles.find(r=>r.name===speakerName); if(role) role.continuousCount++; }else{ if(lastSpeaker){ let prev=roles.find(r=>r.name===lastSpeaker); if(prev) prev.continuousCount=0; } let curr=roles.find(r=>r.name===speakerName); if(curr) curr.continuousCount=1; } lastSpeaker=speakerName; }
+    function addSystemMessage(speaker,content){ chatHistory.push({roleName:speaker,content,action:"",timestamp:Date.now(),snapshot:captureSnapshot(),rawResponse:null,rawRoleplayResponse:null}); renderChatMessages(); }
+    function addCharacterMessage(roleName,content,action,rawResponse,rawRoleplayResponse){ chatHistory.push({roleName,content,action,timestamp:Date.now(),snapshot:captureSnapshot(),rawResponse,rawRoleplayResponse,isNPC:false}); renderChatMessages(); }
+    function addNPCCharacterMessage(npcName,content,action,rawResponse){ chatHistory.push({roleName:`[NPC] ${npcName}`,content,action,timestamp:Date.now(),snapshot:captureSnapshot(),rawResponse,rawRoleplayResponse:null,isNPC:true}); renderChatMessages(); }
+    function renderChatMessages(){ if(!chatMessagesDiv) return; chatMessagesDiv.innerHTML=''; if(chatHistory.length===0) chatMessagesDiv.innerHTML='<div class="bubble"><div class="speaker">🎭 剧场</div><div class="content">对话历史为空，开始演出吧。</div></div>'; else chatHistory.forEach((msg,idx)=>{ const wrapper=document.createElement('div'); wrapper.className='message-wrapper'; const bubble=document.createElement('div'); bubble.className='bubble'+(msg.isNPC?' npc-bubble':''); bubble.innerHTML=`<div class="speaker">${msg.isNPC?'🎭 (临时) ':'🎭 '}${escapeHtml(msg.roleName)}</div>${msg.action?`<div class="action">🎬 ${escapeHtml(msg.action)}</div>`:''}<div class="content">${escapeHtml(msg.content)}</div>`; wrapper.appendChild(bubble); const btnGroup=document.createElement('div'); btnGroup.className='debug-buttons'; btnGroup.style.cssText='position:absolute; right:8px; top:50%; transform:translateY(-50%); display:none; gap:8px; background:rgba(0,0,0,0.6); backdrop-filter:blur(4px); padding:4px 8px; border-radius:40px;'; const canRegenerate=(!msg.isNPC && !msg.roleName.startsWith('[NPC]') && msg.roleName!=="系统" && msg.roleName!=="📖 剧情旁白" && roles.some(r=>r.name===msg.roleName)); btnGroup.innerHTML=canRegenerate?`<button class="debug-btn regenerate-btn" data-idx="${idx}" style="background:#334155; border:none; border-radius:30px; padding:4px 8px; font-size:0.7rem; cursor:pointer;">🔄 重新生成</button><button class="debug-btn rollback-btn" data-idx="${idx}" style="background:#334155; border:none; border-radius:30px; padding:4px 8px; font-size:0.7rem; cursor:pointer;">⏪ 回溯至此</button>`:`<button class="debug-btn rollback-btn" data-idx="${idx}" style="background:#334155; border:none; border-radius:30px; padding:4px 8px; font-size:0.7rem; cursor:pointer;">⏪ 回溯至此</button>`; wrapper.appendChild(btnGroup); wrapper.addEventListener('mouseenter',()=>btnGroup.style.display='flex'); wrapper.addEventListener('mouseleave',()=>btnGroup.style.display='none'); chatMessagesDiv.appendChild(wrapper); }); document.querySelectorAll('.regenerate-btn').forEach(btn=>{ btn.addEventListener('click',async(e)=>{ e.stopPropagation(); const idx=parseInt(btn.getAttribute('data-idx')); if(confirm("重新生成将替换当前消息，是否继续？")){ const msg=chatHistory[idx]; if(msg && msg.roleName && roles.find(r=>r.name===msg.roleName)) await speakAsRole(msg.roleName,null,idx); else showStatusMessage("无法重新生成该消息",true); } }); }); document.querySelectorAll('.rollback-btn').forEach(btn=>{ btn.addEventListener('click',(e)=>{ e.stopPropagation(); const idx=parseInt(btn.getAttribute('data-idx')); if(confirm("回溯将丢失该消息之后的所有对话，建议先存档。确定？")) rollbackToIndex(idx); }); }); chatMessagesDiv.scrollTop=chatMessagesDiv.scrollHeight; }
+    function rollbackToIndex(targetIdx){ if(targetIdx<0||targetIdx>=chatHistory.length) return; const targetMsg=chatHistory[targetIdx]; if(!targetMsg.snapshot){ alert("该消息没有快照，无法回溯"); return; } restoreSnapshot(targetMsg.snapshot); chatHistory=chatHistory.slice(0,targetIdx+1); lastSpeaker=targetMsg.roleName.startsWith('[NPC]')?null:targetMsg.roleName; renderChatMessages(); addSystemMessage("system","⏪ 已回溯至所选消息之后，后续对话已删除。"); }
+    async function autoFlow(){ if(roles.length===0){ alert("请至少添加一名角色"); return; } if(chatHistory.length===0||(chatHistory.length===1&&chatHistory[0].roleName==="system")){ let starter=selectBestSpeakerByWeight(true); if(starter) await speakAsRole(starter); return; } let result=await updateMoodAndRecommend(); if(!result) return; if(result.npcUsed) return; let best=result.best, alternate=result.alternate, raw=result.raw; let bestRole=roles.find(r=>r.name===best), alternateRole=alternate?roles.find(r=>r.name===alternate):null; let finalSpeaker=best; if(bestRole && bestRole.continuousCount>=maxConsecutiveAllowed(bestRole)){ if(alternateRole && alternateRole.continuousCount<maxConsecutiveAllowed(alternateRole)) finalSpeaker=alternate; else addSystemMessage("system",`⚠️ ${best} 已达连续发言上限，但仍由其发言`); } await speakAsRole(finalSpeaker,raw); }
+
+    // -------------------- 缩略关系图（不可交互）--------------------
+    function drawMiniGraph() {
+        const container = document.getElementById('miniGraphContainer');
+        if (!container) return;
+        container.innerHTML = '';
+        if (roles.length === 0) {
+            container.innerHTML = '<div style="text-align:center; line-height:130px; color:var(--text-secondary);">暂无角色</div>';
+            return;
+        }
+        const width = container.clientWidth, height = container.clientHeight;
+        if (width === 0 || height === 0) return;
+        const svg = d3.select(container).append('svg').attr('viewBox', `0 0 ${width} ${height}`).style('background', 'rgba(0,0,0,0.2)').style('border-radius', '14px');
+        const g = svg.append('g');
+        const nodes = roles.map(r => ({ id: r.name, name: r.name }));
+        let links = [];
+        for (let a in roleRelations) {
+            for (let b in roleRelations[a]) {
+                links.push({ source: a, target: b, relation: roleRelations[a][b] });
+            }
+        }
+        // 去重简单力导向
+        const simulation = d3.forceSimulation(nodes)
+            .force('link', d3.forceLink(links).id(d=>d.id).distance(80).strength(0.5))
+            .force('charge', d3.forceManyBody().strength(-200))
+            .force('center', d3.forceCenter(width/2, height/2))
+            .force('collision', d3.forceCollide().radius(20));
+        const link = g.append('g').selectAll('line').data(links).enter().append('line').attr('stroke', 'var(--accent)').attr('stroke-width', 2).attr('stroke-opacity', 0.7);
+        const nodeGroup = g.append('g').selectAll('g').data(nodes).enter().append('g');
+        nodeGroup.append('circle').attr('r', 12).attr('fill', 'var(--card-bg)').attr('stroke', 'var(--accent)').attr('stroke-width', 2);
+        nodeGroup.append('text').attr('dy', 4).attr('text-anchor', 'middle').attr('fill', 'var(--text-primary)').style('font-size', '10px').text(d=>d.name.length>4?d.name.slice(0,3)+'..':d.name);
+        simulation.on('tick', () => {
+            link.attr('x1', d=>d.source.x).attr('y1', d=>d.source.y).attr('x2', d=>d.target.x).attr('y2', d=>d.target.y);
+            nodeGroup.attr('transform', d=>`translate(${d.x},${d.y})`);
+        });
+        simulation.tick(100).stop();
+        // 禁止交互: 不绑定任何事件
+    }
+
+    // -------------------- 关系图编辑器（点击连线填充至编辑栏）--------------------
+    let currentEditRoleIdForGraph = null;
+    function openGraphEditor() {
+        const overlay = document.createElement('div');
+        overlay.className = 'modal-overlay';
+        overlay.innerHTML = `
+            <div class="modal-container">
+                <div class="modal-header"><span style="font-size:1.4rem;">📊 角色关系图（点击连线可填充至左侧编辑区）</span><span class="close-modal">&times;</span></div>
+                <div class="graph-editor-container">
+                    <div class="editor-left">
+                        <div style="display: flex; gap: 2px;"><input type="text" id="graphNewRoleName" placeholder="新角色名"><button id="graphAddRoleBtn">➕</button></div>
+                        <div><strong>当前选中角色</strong> <span id="graphSelectedRoleName">(未选中)</span></div>
+                        <input type="text" id="graphEditPersonality" placeholder="性格">
+                        <input type="text" id="graphEditBackground" placeholder="背景故事">
+                        <div style="display:flex; gap:8px;"><div style="flex:1"><label>说话倾向</label><select id="graphEditTalk">${[...Array(10).keys()].map(i=>`<option value="${i+1}">${i+1}</option>`).join('')}</select></div>
+                        <div style="flex:1"><label>当前情绪</label><select id="graphEditExcite">${[...Array(10).keys()].map(i=>`<option value="${i+1}">${i+1}</option>`).join('')}</select></div>
+                        <div style="flex:1"><label>情绪上限</label><select id="graphEditMaxExcite">${[...Array(10).keys()].map(i=>`<option value="${i+1}">${i+1}</option>`).join('')}</select></div></div>
+                        <div style="display:flex; gap:8px;"><button id="graphUpdateRoleBtn">保存修改</button><button id="graphDeleteRoleBtn">删除角色</button></div>
+                        <hr><div><strong>关系设定（点击连线自动填入）</strong></div>
+                        <div style="display:flex; gap:8px;"><select id="graphRelA" style="flex:2;"></select><button id="graphSwapBtn" style="padding:6px 12px;">🔄</button><select id="graphRelB" style="flex:2;"></select></div>
+                        <textarea id="graphRelDesc" rows="2" placeholder="关系描述 (A → B)"></textarea>
+                        <div style="display:flex; gap:8px;"><button id="graphSaveRelBtn">保存关系</button><button id="graphDelRelBtn">删除关系</button></div>
+                    </div>
+                    <div class="editor-right"><div class="graph-canvas" id="graphCanvas"></div><div class="info-panel"><strong>📌 信息栏</strong><br><span id="graphInfoContent">鼠标悬浮在节点或边上查看详情，点击连线可快速修改</span></div></div>
+                </div>
+            </div>`;
+        document.body.appendChild(overlay);
+        const closeBtn = overlay.querySelector('.close-modal');
+        closeBtn.onclick = () => overlay.remove();
+
+        function syncRolesToGraph() { const opts = roles.map(r=>`<option value="${escapeHtml(r.name)}">${escapeHtml(r.name)}</option>`).join(''); overlay.querySelector('#graphRelA').innerHTML=opts; overlay.querySelector('#graphRelB').innerHTML=opts; }
+        function fillGraphEditForm(role){ if(!role) return; currentEditRoleIdForGraph=role.id; overlay.querySelector('#graphSelectedRoleName').innerText=role.name; overlay.querySelector('#graphEditPersonality').value=role.personality; overlay.querySelector('#graphEditBackground').value=role.background; overlay.querySelector('#graphEditTalk').value=role.talkativeness; overlay.querySelector('#graphEditExcite').value=role.excitement; overlay.querySelector('#graphEditMaxExcite').value=role.maxExcitement; }
+        function renderGraph() {
+            const container = overlay.querySelector('#graphCanvas');
+            if(!container) return; container.innerHTML='';
+            const width=container.clientWidth, height=container.clientHeight; if(width===0) return;
+            const svg = d3.select(container).append('svg').attr('width',width).attr('height',height).call(d3.zoom().on('zoom',(e)=>g.attr('transform',e.transform))).append('g'); const g = svg;
+            const nodes=roles.map(r=>({id:r.name,name:r.name})); let links=[];
+            for(let a in roleRelations) for(let b in roleRelations[a]){ let reverseExists= (roleRelations[b]&&roleRelations[b][a]!==undefined); links.push({source:a,target:b,relation:roleRelations[a][b], curve: reverseExists?8:0 }); }
+            const simulation = d3.forceSimulation(nodes).force('link', d3.forceLink(links).id(d=>d.id).distance(180).strength(0.6)).force('charge',d3.forceManyBody().strength(-400)).force('center',d3.forceCenter(width/2,height/2)).force('collision',d3.forceCollide().radius(35));
+            const link = g.append('g').selectAll('path').data(links).enter().append('path').attr('fill','none').attr('stroke','#f97316').attr('stroke-width',5).attr('opacity',0.9).attr('stroke-linecap','round');
+            const nodeGroup = g.append('g').selectAll('g').data(nodes).enter().append('g').call(d3.drag().on('start',dragstarted).on('drag',dragged).on('end',dragended));
+            nodeGroup.append('circle').attr('r',26).attr('fill','#1e293b').attr('stroke','#f97316').attr('stroke-width',5);
+            nodeGroup.append('text').attr('dy','.35em').attr('text-anchor','middle').attr('fill','white').style('font-size','13px').text(d=>d.name.length>6?d.name.slice(0,5)+'…':d.name);
+            const arrowGroup = g.append('g');
+            function ticked() {
+                link.attr('d', d=>{ const dx=d.target.x-d.source.x, dy=d.target.y-d.source.y, dr=Math.hypot(dx,dy), offset=d.curve; if(offset===0) return `M ${d.source.x},${d.source.y} L ${d.target.x},${d.target.y}`; const perpX=-dy/dr*offset, perpY=dx/dr*offset; return `M ${d.source.x+perpX},${d.source.y+perpY} L ${d.target.x+perpX},${d.target.y+perpY}`; });
+                nodeGroup.attr('transform',d=>`translate(${d.x},${d.y})`);
+                const arrowData=links.map(d=>{ const dx=d.target.x-d.source.x, dy=d.target.y-d.source.y, dr=Math.hypot(dx,dy), offset=d.curve; let mx,my; if(offset===0){ mx=(d.source.x+d.target.x)/2; my=(d.source.y+d.target.y)/2; }else{ const perpX=-dy/dr*offset, perpY=dx/dr*offset; mx=(d.source.x+perpX+d.target.x+perpX)/2; my=(d.source.y+perpY+d.target.y+perpY)/2; } const angle=Math.atan2(dy,dx); return {x:mx,y:my,angle}; });
+                const arrows=arrowGroup.selectAll('polygon').data(arrowData);
+                arrows.enter().append('polygon').attr('points','-10,-7 0,0 -10,7').attr('fill','#f97316').merge(arrows).attr('transform',d=>`translate(${d.x},${d.y}) rotate(${d.angle*180/Math.PI})`);
+                arrows.exit().remove();
+            }
+            simulation.on('tick',ticked);
+            function dragstarted(e){ if(!e.active) simulation.alphaTarget(0.3).restart(); e.subject.fx=e.subject.x; e.subject.fy=e.subject.y; }
+            function dragged(e){ e.subject.fx=e.x; e.subject.fy=e.y; }
+            function dragended(e){ if(!e.active) simulation.alphaTarget(0); e.subject.fx=null; e.subject.fy=null; }
+            // 悬浮效果
+            nodeGroup.on('mouseenter',function(event,d){ d3.select(this).select('circle').transition().duration(150).attr('r',32).attr('stroke-width',6); link.filter(l=>l.source.id===d.id||l.target.id===d.id).transition().duration(150).attr('stroke-width',6).attr('stroke','#ffaa66'); const role=roles.find(r=>r.name===d.id); if(role) overlay.querySelector('#graphInfoContent').innerHTML=`<strong>角色：${role.name}</strong><br>性格：${role.personality}<br>背景：${role.background}<br>倾向：${role.talkativeness}<br>情绪：${role.excitement}/${role.maxExcitement}`; }).on('mouseleave',function(){ d3.select(this).select('circle').transition().duration(150).attr('r',26).attr('stroke-width',5); link.transition().duration(150).attr('stroke-width',5).attr('stroke','#f97316'); overlay.querySelector('#graphInfoContent').innerHTML='鼠标悬浮在节点或边上查看详情，点击连线可快速修改'; });
+            link.on('mouseenter',function(event,d){ d3.select(this).transition().duration(150).attr('stroke-width',6).attr('stroke','#ffaa66'); nodeGroup.filter(n=>n.id===d.source.id).select('circle').transition().duration(150).attr('r',32).attr('stroke-width',6); nodeGroup.filter(n=>n.id===d.target.id).select('circle').transition().duration(150).attr('r',32).attr('stroke-width',6); overlay.querySelector('#graphInfoContent').innerHTML=`<strong>关系：${d.source.name} → ${d.target.name}</strong><br>描述：${d.relation}`; }).on('mouseleave',function(){ d3.select(this).transition().duration(150).attr('stroke-width',5).attr('stroke','#f97316'); nodeGroup.select('circle').transition().duration(150).attr('r',26).attr('stroke-width',5); overlay.querySelector('#graphInfoContent').innerHTML='鼠标悬浮在节点或边上查看详情，点击连线可快速修改'; });
+            // ★ 新增：点击连线自动填充到关系编辑栏 ★
+            link.on('click', function(event, d) {
+                event.stopPropagation();
+                const aSelect = overlay.querySelector('#graphRelA');
+                const bSelect = overlay.querySelector('#graphRelB');
+                const descText = overlay.querySelector('#graphRelDesc');
+                aSelect.value = d.source.id;
+                bSelect.value = d.target.id;
+                descText.value = d.relation;
+                showStatusMessage(`已选中关系：${d.source.id} → ${d.target.id}，可修改后保存`, false);
+            });
+            nodeGroup.on('click',function(event,d){ const role=roles.find(r=>r.name===d.id); if(role) fillGraphEditForm(role); });
+        }
+        function graphAddRole(){ const name=overlay.querySelector('#graphNewRoleName').value.trim(); if(!name) return; if(roles.some(r=>r.name===name)){ alert('角色已存在'); return; } addRole(name,"新角色","",5,5,10); syncRolesToGraph(); renderGraph(); overlay.querySelector('#graphNewRoleName').value=''; const newRole=roles.find(r=>r.name===name); if(newRole) fillGraphEditForm(newRole); updatePreviews(); }
+        function graphUpdateRole(){ const role=roles.find(r=>r.id===currentEditRoleIdForGraph); if(!role){ alert('请先点击图形中的节点选择一个角色'); return; } role.personality=overlay.querySelector('#graphEditPersonality').value; role.background=overlay.querySelector('#graphEditBackground').value; role.talkativeness=parseInt(overlay.querySelector('#graphEditTalk').value); role.excitement=parseInt(overlay.querySelector('#graphEditExcite').value); role.maxExcitement=parseInt(overlay.querySelector('#graphEditMaxExcite').value); if(role.excitement>role.maxExcitement) role.excitement=role.maxExcitement; syncRolesToGraph(); renderGraph(); updatePreviews(); }
+        function graphDeleteRole(){ const role=roles.find(r=>r.id===currentEditRoleIdForGraph); if(!role){ alert('请先点击图形中的节点选择要删除的角色'); return; } if(confirm(`删除角色 ${role.name} 将同时删除所有相关关系`)){ deleteRole(role.id); syncRolesToGraph(); renderGraph(); if(roles.length) fillGraphEditForm(roles[0]); else overlay.querySelector('#graphSelectedRoleName').innerText='(无角色)'; updatePreviews(); } }
+        function graphSaveRelation(){ const a=overlay.querySelector('#graphRelA').value, b=overlay.querySelector('#graphRelB').value, desc=overlay.querySelector('#graphRelDesc').value.trim(); if(!a||!b||a===b){ alert('请选择两个不同角色'); return; } if(!desc){ alert('请输入关系描述'); return; } if(!roleRelations[a]) roleRelations[a]={}; roleRelations[a][b]=desc; renderGraph(); updatePreviews(); }
+        function graphDeleteRelation(){ const a=overlay.querySelector('#graphRelA').value, b=overlay.querySelector('#graphRelB').value; if(roleRelations[a]&&roleRelations[a][b]){ delete roleRelations[a][b]; renderGraph(); updatePreviews(); } else alert('该关系不存在'); }
+        function graphSwap(){ const a=overlay.querySelector('#graphRelA'), b=overlay.querySelector('#graphRelB'); const tmp=a.value; a.value=b.value; b.value=tmp; }
+        overlay.querySelector('#graphAddRoleBtn').onclick=graphAddRole;
+        overlay.querySelector('#graphUpdateRoleBtn').onclick=graphUpdateRole;
+        overlay.querySelector('#graphDeleteRoleBtn').onclick=graphDeleteRole;
+        overlay.querySelector('#graphSaveRelBtn').onclick=graphSaveRelation;
+        overlay.querySelector('#graphDelRelBtn').onclick=graphDeleteRelation;
+        overlay.querySelector('#graphSwapBtn').onclick=graphSwap;
+        syncRolesToGraph(); if(roles.length) fillGraphEditForm(roles[0]); renderGraph();
+        window.addEventListener('resize',()=>{ if(overlay.parentNode) renderGraph(); });
+    }
+
+    // 全局设置（美化 + 自选主题颜色）
+    let currentModal=null;
+    function closeModal(){ if(currentModal) currentModal.remove(); currentModal=null; }
+    function showModal(title, contentHtml, onClose=null){
+        if(currentModal) closeModal();
+        const overlay=document.createElement('div'); overlay.className='modal-overlay';
+        overlay.innerHTML=`<div class="modal-container" style="max-width:600px;"><div class="modal-header"><span>${escapeHtml(title)}</span><span class="close-modal">&times;</span></div><div class="modal-body">${contentHtml}</div></div>`;
+        overlay.querySelector('.close-modal').onclick=()=>{ closeModal(); if(onClose) onClose(); };
+        overlay.onclick=(e)=>{ if(e.target===overlay){ closeModal(); if(onClose) onClose(); } };
+        document.body.appendChild(overlay); currentModal=overlay;
+        return overlay.querySelector('.modal-body');
+    }
+    function openWorldModal(){
+        const html=`<label>场景</label><textarea id="modalScene" rows="2">${escapeHtml(scene)}</textarea><label>动机</label><textarea id="modalMotivation" rows="2">${escapeHtml(motivation)}</textarea><button id="saveWorldBtn">保存</button>`;
+        const body=showModal("世界观设定",html);
+        body.querySelector('#saveWorldBtn').onclick=()=>{ scene=body.querySelector('#modalScene').value; motivation=body.querySelector('#modalMotivation').value; updatePreviews(); addSystemMessage("system","世界观已更新。"); closeModal(); };
+    }
+    function openGlobalSettings(){
+        const html=`
+            <label>🔑 API Key</label><input type="password" id="apiKeyInput" placeholder="sk-..." value="${escapeHtml(apiKey)}">
+            <label>🌐 API URL (固定)</label><input type="text" id="apiUrlDisplay" value="${API_URL}" disabled style="background:#334155;">
+            <label>🤖 模型名称</label><input id="modelInput" value="${escapeHtml(modelName)}">
+            <hr>
+            <div class="color-row"><label>🎨 主题主色 (强调色)</label><input type="color" id="themeAccentPicker" value="#f97316"></div>
+            <div class="color-row"><label>🌌 背景起始色 (深色渐变左)</label><input type="color" id="themeBgStart" value="#1e2a3a"></div>
+            <div class="color-row"><label>🌃 背景结束色 (深色渐变右)</label><input type="color" id="themeBgEnd" value="#0f1724"></div>
+            <button id="applyThemeBtn">应用主题颜色</button>
+            <hr>
+            <button id="exportBtn">💾 导出存档</button> <button id="importBtn">📂 导入存档</button><input type="file" id="importFile" style="display:none;">
+            <hr><button id="resetHistoryBtn">🗑️ 重置对话</button>
+            <hr><button id="themeDark">深色模式</button> <button id="themeLight">浅色模式</button>
+            <div class="api-help">点击「角色设定」模块可打开图形化关系编辑器。</div>`;
+        const body=showModal("全局设置",html);
+        body.querySelector('#apiKeyInput').onchange=e=>apiKey=e.target.value;
+        body.querySelector('#modelInput').onchange=e=>modelName=e.target.value;
+        body.querySelector('#resetHistoryBtn').onclick=()=>{ resetChatHistory(); closeModal(); };
+        body.querySelector('#themeDark').onclick=()=>{ document.body.classList.remove('light'); closeModal(); };
+        body.querySelector('#themeLight').onclick=()=>{ document.body.classList.add('light'); closeModal(); };
+        body.querySelector('#exportBtn').onclick=()=>{ const save={roles,roleRelations,relationText,scene,motivation,chatHistory}; const blob=new Blob([JSON.stringify(save,null,2)],{type:"application/json"}); const a=document.createElement('a'); a.href=URL.createObjectURL(blob); a.download=`剧场存档_${Date.now()}.txt`; a.click(); URL.revokeObjectURL(a.href); };
+        const fileInput=body.querySelector('#importFile');
+        body.querySelector('#importBtn').onclick=()=>fileInput.click();
+        fileInput.onchange=e=>{ const file=e.target.files[0]; if(!file) return; const reader=new FileReader(); reader.onload=ev=>{ try{ const data=JSON.parse(ev.target.result); roles=data.roles||[]; roleRelations=data.roleRelations||{}; relationText=data.relationText||""; scene=data.scene||""; motivation=data.motivation||""; chatHistory=data.chatHistory||[]; if(!roles.some(r=>r.maxExcitement)) roles.forEach(r=>r.maxExcitement=r.maxExcitement||10); if(!roles.some(r=>r.continuousCount)) roles.forEach(r=>r.continuousCount=0); updatePreviews(); renderChatMessages(); lastSpeaker=null; addSystemMessage("system","存档加载成功！"); closeModal(); }catch(err){ alert("加载失败: "+err.message); } }; reader.readAsText(file); };
+        // 主题颜色应用
+        const accentPicker=body.querySelector('#themeAccentPicker');
+        const bgStart=body.querySelector('#themeBgStart');
+        const bgEnd=body.querySelector('#themeBgEnd');
+        body.querySelector('#applyThemeBtn').onclick=()=>{
+            const newAccent=accentPicker.value;
+            const newStart=bgStart.value;
+            const newEnd=bgEnd.value;
+            document.documentElement.style.setProperty('--accent', newAccent);
+            document.documentElement.style.setProperty('--accent-hover', newAccent);
+            document.documentElement.style.setProperty('--bg-body', `linear-gradient(145deg, ${newStart} 0%, ${newEnd} 100%)`);
+            showStatusMessage("主题颜色已应用（保存至当前会话）", false);
+        };
+    }
+    function resetChatHistory(){ chatHistory=[]; lastSpeaker=null; roles.forEach(r=>r.continuousCount=0); addSystemMessage("system","对话已重置。"); }
+    function initDemo(){
+        if(roles.length===0){
+            addRole("樱","阳光元气","大三女生",10,5,8);
+            addRole("凛","傲娇好胜","大二女生",6,7,10);
+            addRole("良","阴暗内向","大三女生",4,4,5);
+            if(!roleRelations["樱"]) roleRelations["樱"]={};
+            if(!roleRelations["凛"]) roleRelations["凛"]={};
+            if(!roleRelations["良"]) roleRelations["良"]={};
+            roleRelations["良"]["凛"]="良是凛的社团前辈。";
+            roleRelations["樱"]["良"]="两人互为舍友";
+            roleRelations["良"]["樱"]="两人互为舍友";
+        }
+        scene="在创咖。下午四点左右，店内比较安静。";
+        motivation="凛和良一起来到创咖，偶遇正在喝咖啡的樱。";
+        updatePreviews();
+        resetChatHistory();
+    }
+    document.getElementById('moduleWorldBtn').onclick=openWorldModal;
+    document.getElementById('moduleRoleBtn').onclick=openGraphEditor;
+    document.getElementById('moduleSettingsBtn').onclick=openGlobalSettings;
+    document.getElementById('speakAutoBtn').onclick=async()=>{ if(!apiKey){ alert("请先设置API Key"); openGlobalSettings(); return; } await autoFlow(); };
+    document.getElementById('speakManualBtn').onclick=async()=>{ if(!apiKey){ alert("请设置API Key"); openGlobalSettings(); return; } let sel=manualRoleSelect.value; if(!sel){ alert("选择角色"); return; } await speakAsRole(sel); };
+    document.getElementById('userSpeakBtn').onclick=()=>{ let role=userRoleSelect.value; if(!role){ showStatusMessage("请选择要扮演的角色",true); return; } userSpeak(role, userActionInput.value, userLineInput.value); userActionInput.value=''; userLineInput.value=''; };
+    document.getElementById('generateNarrationBtn').onclick=async()=>{ if(!apiKey){ alert("请先设置API Key"); openGlobalSettings(); return; } await generateNarration(); };
+    initDemo();
+    window.addEventListener('resize', ()=> drawMiniGraph());
+</script>
+
+</body></html>
